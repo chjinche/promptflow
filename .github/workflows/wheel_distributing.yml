@@ -86,23 +86,25 @@ jobs:
           fi
 
           # Compose the new tag
-          NEW_TAG="promptflow_tools_${VERSION}rc${NEW_RC_NUM}"
-          echo "New Tag: $NEW_TAG"
+          NEW_TAG="${VERSION}rc${NEW_RC_NUM}"
+          echo "New Tag: promptflow_tools_$NEW_TAG"
 
           # Set the new tag as an output of this step
           echo "::set-output name=new_tag::$NEW_TAG"
 
           # Override the version in version.txt
           echo "VERSION = \"$NEW_TAG\"" > src/${{ inputs.SourceFolderName }}/promptflow/version.txt
-      
-      - name: Create and push tag
-        if: input.IsCandidateRelease == "True" && github.event_name == 'workflow_dispatch'
-        uses: mathieudutour/github-tag-action@v5.6
+
+      - name: Create candidate release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.rc_version.outputs.new_tag }}
-          create_annotated_tag: false
-          release_notes: "promptflow-tools release candidate ${{ steps.rc_version.outputs.new_tag }}"      
+          tag_name: promptflow_tools_${{ steps.rc_version.outputs.new_tag }}
+          release_name: "promptflow-tools release candidate ${{ steps.rc_version.outputs.new_tag }}"
+          draft: false
+          prerelease: true
 
       - name: Set up conda environment
         uses: conda-incubator/setup-miniconda@v2
