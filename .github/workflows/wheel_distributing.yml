@@ -56,7 +56,7 @@ jobs:
 
       - name: Override version with workflow run number
         id: override_version
-        if: inputs.IsCandidateRelease == "False" && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.ReleaseType == 'Test'))
+        if: inputs.IsCandidateRelease == 'False' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.ReleaseType == 'Test'))
         run: |
           echo "VERSION = \"0.0.${{ github.run_number }}\"" > src/${{ inputs.SourceFolderName }}/promptflow/version.txt
           echo "VERSION: 0.0.${{ github.run_number }}"
@@ -64,7 +64,7 @@ jobs:
       
       - name: Override version with release candidate tag version
         id: rc_version
-        if: inputs.IsCandidateRelease == "True" && github.event_name == 'workflow_dispatch'
+        if: inputs.IsCandidateRelease == 'True' && github.event_name == 'workflow_dispatch'
         run: |
           # Read the version from version.txt
           VERSION=$(cat src/${{ inputs.SourceFolderName }}/promptflow/version.txt)
