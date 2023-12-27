@@ -22,6 +22,11 @@ on:
         default: "scripts/distributing/configs"
         required: false
         description: 'Configs folder path'
+      IsCandidateRelease:
+        type: string
+        default: "False"
+        required: false
+        description: 'Whether it is a candidate release'
     outputs:
       PackageVersion:
         description: 'The version of the package'
@@ -41,6 +46,7 @@ jobs:
           echo "UploadAsLatest: ${{ inputs.UploadAsLatest }}"
           echo "SourceFolderName: ${{ inputs.SourceFolderName }}"
           echo "ConfigsFolderPath: ${{ inputs.ConfigsFolderPath }}"
+          echo "IsCandidateRelease: ${{ inputs.IsCandidateRelease }}"
 
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -50,11 +56,53 @@ jobs:
 
       - name: Override version with workflow run number
         id: override_version
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.ReleaseType == 'Test')
+        if: input.IsCandidateRelease == "False" && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.ReleaseType == 'Test'))
         run: |
           echo "VERSION = \"0.0.${{ github.run_number }}\"" > src/${{ inputs.SourceFolderName }}/promptflow/version.txt
           echo "VERSION: 0.0.${{ github.run_number }}"
           echo "version=0.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+      
+      - name: Override version with release candidate tag version
+        id: rc_version
+        if: input.IsCandidateRelease == "True" && github.event_name == 'workflow_dispatch'
+        run: |
+          # Read the version from version.txt
+          VERSION=$(cat src/${{ inputs.SourceFolderName }}/promptflow/version.txt)
+          echo "Version from version.txt: $VERSION"
+
+          # Fetch the latest tag and extract its version and RC number
+          LATEST_TAG = $(git tag -l 'promptflow_tools_*' | sort -V | tail -n 1)
+          TAG_VERSION=$(echo $LATEST_TAG | sed -E 's/promptflow_tools_([0-9.]+)rc([0-9]+)/\1/')
+          TAG_RC_NUM=$(echo $LATEST_TAG | sed -E 's/promptflow_tools_([0-9.]+)rc([0-9]+)/\2/')
+          echo "Latest tag version: $TAG_VERSION"
+          echo "Latest tag RC number: $TAG_RC_NUM"
+
+          # Compare and compose the new tag
+          if [ "$VERSION" == "$TAG_VERSION" ]; then
+            NEW_RC_NUM=$((TAG_RC_NUM + 1))
+          else
+            VERSION=$TAG_VERSION
+            NEW_RC_NUM=1
+          fi
+
+          # Compose the new tag
+          NEW_TAG="promptflow_tools_${VERSION}rc${NEW_RC_NUM}"
+          echo "New Tag: $NEW_TAG"
+
+          # Set the new tag as an output of this step
+          echo "::set-output name=new_tag::$NEW_TAG"
+
+          # Override the version in version.txt
+          echo "VERSION = \"$NEW_TAG\"" > src/${{ inputs.SourceFolderName }}/promptflow/version.txt
+      
+      - name: Create and Push Tag
+        need: rc_version
+        uses: mathieudutour/github-tag-action@v5.6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.rc_version.outputs.new_tag }}
+          create_annotated_tag: false
+          release_notes: "promptflow-tools release candidate ${{ steps.rc_version.outputs.new_tag }}"      
 
       - name: Set up conda environment
         uses: conda-incubator/setup-miniconda@v2
