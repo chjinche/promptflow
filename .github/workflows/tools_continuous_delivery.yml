@@ -28,7 +28,7 @@ jobs:
     name: Private PyPI main branch release
     with:
       ReleaseType: "Release"
-      UploadAsLatest: "False"
+      UploadAsLatest: "True"
       SourceFolderName: "promptflow-tools"
       ConfigsFolderPath: "scripts/distributing/configs"
     secrets: inherit
@@ -43,23 +43,6 @@ jobs:
       SourceFolderName: "promptflow-tools"
       ConfigsFolderPath: "scripts/distributing/configs"
     secrets: inherit
-  
-  # private pypi candidate release asks for approval.
-  approve_candidate_release:
-    if: github.event_name == 'workflow_dispatch' && inputs.is_candidate_release
-    runs-on: ubuntu-latest
-    name: Approve manual release
-    permissions:
-      issues: write
-    steps:
-      - name: Wait for approval
-        uses: trstringer/manual-approval@v1
-        timeout-minutes: 60
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: 16oeahr,chjinche,DaweiCai
-          minimum-approvals: 1
-          issue-title: "Request to release new promptflow-tools candidate version."
 
   candidate_release:
     needs: approve_candidate_release
@@ -67,7 +50,7 @@ jobs:
     name: Private PyPI candidate release
     with:
       ReleaseType: "Release"
-      UploadAsLatest: "True"
+      UploadAsLatest: "False"
       SourceFolderName: "promptflow-tools"
       ConfigsFolderPath: "scripts/distributing/configs"
       IsCandidateRelease: "True"
