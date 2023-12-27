@@ -96,7 +96,7 @@ jobs:
           echo "VERSION = \"$NEW_TAG\"" > src/${{ inputs.SourceFolderName }}/promptflow/version.txt
       
       - name: Create and Push Tag
-        need: rc_version
+        needs: rc_version
         uses: mathieudutour/github-tag-action@v5.6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
