@@ -45,7 +45,6 @@ jobs:
     secrets: inherit
 
   candidate_release:
-    needs: approve_candidate_release
     uses: ./.github/workflows/wheel_distributing.yml
     name: Private PyPI candidate release
     with:
